@@ -1,0 +1,9 @@
+[submodule "api"]
+	path = api
+	url = https://github.com/co2impact/co2Reporting-api
+    branch = main
+
+[submodule "frontend"]
+    path = frontend
+    url = https://github.com/co2impact/co2Reporting-frontend
+    branch = main

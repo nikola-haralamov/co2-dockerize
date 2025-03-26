@@ -1,0 +1,129 @@
+
+networks:
+  laravel:
+
+services:
+  app:
+    build:
+      context: ./.docker
+      dockerfile: nginx.dockerfile
+      args:
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+    ports:
+      - "80:80"
+    volumes:
+      - ./api:/var/www/html:delegated
+    extra_hosts:
+      - "co2api.lo:127.0.0.1"
+    depends_on:
+      - php
+      - redis
+      - mariadb
+    networks:
+      - laravel
+
+  php:
+    build:
+      context: ./.docker
+      dockerfile: php.dockerfile
+      args:
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./api:/var/www/html:delegated
+    networks:
+      - laravel
+
+  composer:
+    build:
+      context: ./.docker
+      dockerfile: php.dockerfile
+      args:
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+    volumes:
+      - ./api:/var/www/html:delegated
+    depends_on:
+      - php
+    entrypoint: [ 'composer', '--ignore-platform-reqs' ]
+    networks:
+      - laravel
+
+  artisan:
+    build:
+      context: ./.docker
+      dockerfile: php.dockerfile
+      args:
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+    volumes:
+      - ./api:/var/www/html:delegated
+    depends_on:
+      - php
+      - mariadb
+    entrypoint: [ 'php', '/var/www/html/artisan' ]
+    networks:
+      - laravel
+
+  npm:
+    image: node:current-alpine
+    volumes:
+      - ./frontend:/var/www/html:delegated
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "5173:5173"
+    working_dir: /var/www/html:delegated
+    entrypoint: [ 'npm' ]
+    networks:
+      - laravel
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - laravel
+
+  mariadb:
+    container_name: mariadb
+    image: mariadb:latest
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    volumes:
+      - ./data/mariadb:/var/lib/mariadb
+    environment:
+      MARIADB_HOST: ${DB_HOST}
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MARIADB_DATABASE: ${DB_DATABASE}
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - laravel
+
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin/phpmyadmin:latest
+    restart: unless-stopped
+    ports:
+      - "${PHPMYADMIN_PORT}:${PHPMYADMIN_PORT}"
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: ${DB_PORT}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MEMORY_LIMIT: '-1'
+      MAX_EXECUTION_TIME: 0
+      APACHE_PORT: ${PHPMYADMIN_PORT}
+      UPLOAD_LIMIT: '10G'
+    depends_on:
+      - mariadb
+    networks:
+      - laravel

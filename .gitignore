@@ -1,0 +1,11 @@
+.env
+.env.backup
+.env.production
+
+/pgadmin/.env
+
+/data
+
+/.fleet
+/.idea
+/.vscode
